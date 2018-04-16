@@ -7,26 +7,25 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FilenameFilter;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.util.ArrayList;
 
 import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 
-import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.BufferedHttpEntity;
-import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.InputStreamEntity;
-import org.apache.http.entity.StringEntity;
+//import org.apache.http.entity.StringEntity;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.message.BufferedHeader;
 import org.apache.http.util.EntityUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -75,65 +74,87 @@ public class FaceAPI
             request.setHeader("Ocp-Apim-Subscription-Key", subscriptionKey);
 
             // Request body.
-            StringEntity e1 = new StringEntity("{\"url\":\"https://upload.wikimedia.org/wikipedia/commons/c/c3/RH_Louise_Lillian_Gish.jpg\"}");
+            // StringEntity e1 = new StringEntity("{\"url\":\"https://upload.wikimedia.org/wikipedia/commons/c/c3/RH_Louise_Lillian_Gish.jpg\"}");
             
             //NEW CODE: Trying to change the request Entity to be an InputStream
-            BufferedImage bi = ImageIO.read(new File("./pic.jpg"));
-            ByteArrayOutputStream os = new ByteArrayOutputStream();
-            ImageIO.write(bi,"jpg", os); 
-            InputStream fis = new ByteArrayInputStream(os.toByteArray());
-            
-            InputStreamEntity e2 = new InputStreamEntity(fis, -1);
-            
-            //END NEW CODE
-            
-            request.setEntity(e2);
-
-            // Execute the REST API call and get the response entity.
-            HttpResponse response = httpclient.execute(request);
-            HttpEntity entity = response.getEntity();
-
-            if (entity != null)
-            {
-                // Format and display the JSON response.
-                //System.out.println("REST Response:\n");
-
-                String jsonString = EntityUtils.toString(entity).trim();
-                Graphics2D BBoxDrawer = bi.createGraphics();
-                BBoxDrawer.setColor(Color.RED);
-                
-                if (jsonString.charAt(0) == '[') {
-                    JSONArray jsonArray = new JSONArray(jsonString);
-                    //System.out.println(jsonArray.toString(2));
-                    for(int i = 0; i < jsonArray.length(); i++)
-                    {
-                    	JSONObject jo = jsonArray.getJSONObject(i).getJSONObject("faceRectangle");
-                    	int top = jo.getInt("top");
-                    	int left = jo.getInt("left");
-                    	int width = jo.getInt("width");
-                    	int height = jo.getInt("height");
-                    
-                    	System.out.println("Top: " + top);
-                    	System.out.println("Left: " + left);
-                    	System.out.println("Width: " + width);
-                    	System.out.println("Height: " + height);
-                    
-                    	System.out.println("(" + left + ", " + top + ") - (" + (left+width) + ", " + (top+height) + ")");               
-                    	BBoxDrawer.drawRect(left, top, width, height);
-                    }  
+            File dir = new File(".");
+            String[] EXTENSIONS = new String[]{"jpg", "png", "gif"};
+            FilenameFilter IMAGE_FILTER = new FilenameFilter() {
+                @Override
+                public boolean accept(final File dir, final String filename) {
+                    for (String extension : EXTENSIONS) if (filename.endsWith("." + extension)) return true;
+                    return false;
                 }
-                else if (jsonString.charAt(0) == '{') {
-                    JSONObject jsonObject = new JSONObject(jsonString);
-                    System.out.println(jsonObject.toString(2));      
-                } else {
-                    System.out.println(jsonString);
+            };
+            ArrayList<BufferedImage> images = new ArrayList<BufferedImage>();
+            if (dir.isDirectory()) { // make sure it's a directory
+                for (final File f : dir.listFiles(IMAGE_FILTER)) {
+                    try {
+                    	images.add(ImageIO.read(f));
+                    } catch (final IOException e) {
+                    }
                 }
             }
-            JFrame jf = new JFrame("FaceFinder");
-            jf.setSize(bi.getWidth(), bi.getHeight()+45);
-            jf.getContentPane().add(new JLabel(new ImageIcon(bi)));	
-            jf.setDefaultCloseOperation(3);
-            jf.setVisible(true);
+            
+//            BufferedImage bi = ImageIO.read(new File("./pic.jpg"));
+            for (BufferedImage bi : images) {
+                ByteArrayOutputStream os = new ByteArrayOutputStream();
+                ImageIO.write(bi,"jpg", os); 
+                InputStream fis = new ByteArrayInputStream(os.toByteArray());
+                
+                InputStreamEntity e2 = new InputStreamEntity(fis, -1);
+                
+                //END NEW CODE
+                
+                request.setEntity(e2);
+
+                // Execute the REST API call and get the response entity.
+                HttpResponse response = httpclient.execute(request);
+                HttpEntity entity = response.getEntity();
+
+                if (entity != null)
+                {
+                    // Format and display the JSON response.
+                    //System.out.println("REST Response:\n");
+
+                    String jsonString = EntityUtils.toString(entity).trim();
+                    Graphics2D BBoxDrawer = bi.createGraphics();
+                    BBoxDrawer.setColor(Color.RED);
+                    
+                    if (jsonString.charAt(0) == '[') {
+                        JSONArray jsonArray = new JSONArray(jsonString);
+                        //System.out.println(jsonArray.toString(2));
+                        for(int i = 0; i < jsonArray.length(); i++)
+                        {
+                        	JSONObject jo = jsonArray.getJSONObject(i).getJSONObject("faceRectangle");
+                        	int top = jo.getInt("top");
+                        	int left = jo.getInt("left");
+                        	int width = jo.getInt("width");
+                        	int height = jo.getInt("height");
+                        
+                        	System.out.println("Top: " + top);
+                        	System.out.println("Left: " + left);
+                        	System.out.println("Width: " + width);
+                        	System.out.println("Height: " + height);
+                        
+                        	System.out.println("(" + left + ", " + top + ") - (" + (left+width) + ", " + (top+height) + ")");               
+                        	BBoxDrawer.drawRect(left, top, width, height);
+                        }  
+                    }
+                    else if (jsonString.charAt(0) == '{') {
+                        JSONObject jsonObject = new JSONObject(jsonString);
+                        System.out.println(jsonObject.toString(2));      
+                    } else {
+                        System.out.println(jsonString);
+                    }
+                }
+                JFrame jf = new JFrame("FaceFinder");
+                jf.setSize(bi.getWidth(), bi.getHeight()+45);
+                jf.getContentPane().add(new JLabel(new ImageIcon(bi)));	
+                jf.setDefaultCloseOperation(3);
+                jf.setVisible(true);
+            }
+
         }
         catch (Exception e)
         {
