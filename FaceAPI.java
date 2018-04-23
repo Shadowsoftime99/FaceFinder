@@ -22,8 +22,9 @@ import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.InputStreamEntity;
-//import org.apache.http.entity.StringEntity;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.util.EntityUtils;
@@ -111,9 +112,38 @@ public class FaceAPI
                 // Execute the REST API call and get the response entity.
                 HttpResponse response = httpclient.execute(request);
                 HttpEntity entity = response.getEntity();
+                
+                
+                
+                
+                
+                HttpClient httpclient2 = new DefaultHttpClient();
 
-                if (entity != null)
-                {
+
+                URIBuilder builder2 = new URIBuilder("https://eastus2.api.cognitive.microsoft.com/face/v1.0/facelists/face_list_3");
+
+
+                URI uri2 = builder2.build();
+                HttpPut request2 = new HttpPut(uri2);
+                request2.setHeader("Content-Type", "application/json");
+                request2.setHeader("Ocp-Apim-Subscription-Key", subscriptionKey);
+
+
+                // Request body
+                StringEntity reqEntity = new StringEntity("{\"name\": \"face_list_3\"}");
+                request2.setEntity(reqEntity);
+
+                HttpResponse response2 = httpclient2.execute(request2);
+                HttpEntity entity2 = response2.getEntity();
+
+                if (entity2 != null) {
+                    System.out.println(EntityUtils.toString(entity2));
+                }
+                
+                
+                
+                
+                if (entity != null) {
                     // Format and display the JSON response.
                     //System.out.println("REST Response:\n");
 
@@ -123,23 +153,75 @@ public class FaceAPI
                     
                     if (jsonString.charAt(0) == '[') {
                         JSONArray jsonArray = new JSONArray(jsonString);
-                        //System.out.println(jsonArray.toString(2));
-                        for(int i = 0; i < jsonArray.length(); i++)
-                        {
+                        ArrayList<String> face_ids = new ArrayList<String>(0);
+                        for(int i = 0; i < jsonArray.length(); i++) {
                         	JSONObject jo = jsonArray.getJSONObject(i).getJSONObject("faceRectangle");
+                        	face_ids.add(jsonArray.getJSONObject(i).getString("faceId"));
                         	int top = jo.getInt("top");
                         	int left = jo.getInt("left");
                         	int width = jo.getInt("width");
                         	int height = jo.getInt("height");
                         
-                        	System.out.println("Top: " + top);
-                        	System.out.println("Left: " + left);
-                        	System.out.println("Width: " + width);
-                        	System.out.println("Height: " + height);
-                        
-                        	System.out.println("(" + left + ", " + top + ") - (" + (left+width) + ", " + (top+height) + ")");               
+                        	System.out.println(jsonArray.toString(2));           
                         	BBoxDrawer.drawRect(left, top, width, height);
+                        	
+                        	
+                        	
+                        	
+                        	URIBuilder builder3 = new URIBuilder("https://eastus2.api.cognitive.microsoft.com/face/v1.0/facelists/face_list_3");
+
+                        	builder3.setParameter("faceListId", "face_list_3");
+//                            builder3.setParameter("userData", "{string}");
+                            builder3.setParameter("targetFace", left +","+ top +","+ width +","+ height);
+
+                            URI uri3 = builder3.build();
+                            HttpPost request3 = new HttpPost(uri3);
+                            request.setHeader("Content-Type", "application/octet-stream");
+                            request.setHeader("Ocp-Apim-Subscription-Key", subscriptionKey);
+
+
+                            // Request body
+                            request.setEntity(e2);
+
+                            HttpResponse response3 = httpclient.execute(request3);
+                            HttpEntity entity3 = response3.getEntity();
+
+                            if (entity3 != null) 
+                            {
+//                                System.out.println(EntityUtils.toString(entity3));
+                            }
+                        	
+                        	
+                        	
+                        	
                         }  
+                        
+                        httpclient = new DefaultHttpClient();
+                        URIBuilder builder4 = new URIBuilder("https://eastus2.api.cognitive.microsoft.com/face/v1.0/findsimilars");
+
+
+                        URI uri4 = builder4.build();
+                        HttpPost request4 = new HttpPost(uri4);
+                        request4.setHeader("Content-Type", "application/json");
+                        request4.setHeader("Ocp-Apim-Subscription-Key", subscriptionKey);
+
+
+                        // Request body
+                        for (int i = 0; i < face_ids.size(); i++) {
+                            StringEntity reqEntity4 = new StringEntity("\"faceId\": \""+ face_ids.get(i) + "\",\n\"faceListId\": \"face_list_3\"");
+                            request4.setEntity(reqEntity4);
+
+                            HttpResponse response4 = httpclient.execute(request4);
+                            HttpEntity entity4 = response4.getEntity();
+
+                            if (entity4 != null) 
+                            {
+                                System.out.println(EntityUtils.toString(entity4));
+                            }
+                        }
+                        
+                        
+                        
                     }
                     else if (jsonString.charAt(0) == '{') {
                         JSONObject jsonObject = new JSONObject(jsonString);
