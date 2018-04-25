@@ -21,6 +21,8 @@ import javax.swing.JLabel;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpDelete;
+import org.apache.http.client.methods.HttpGet ;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.InputStreamEntity;
@@ -53,12 +55,10 @@ public class FaceAPI
 
 
     public static void main(String[] args)
-    {
-    	//FaceServiceClient client = new Face
-        HttpClient httpclient = new DefaultHttpClient();
-
+    {        
         try
         {
+        	HttpClient httpclient = new DefaultHttpClient();
             URIBuilder builder = new URIBuilder(uriBase);
 
             // Request parameters. All of them are optional.
@@ -80,25 +80,57 @@ public class FaceAPI
             //NEW CODE: Trying to change the request Entity to be an InputStream
             File dir = new File(".");
             String[] EXTENSIONS = new String[]{"jpg", "png", "gif"};
-            FilenameFilter IMAGE_FILTER = new FilenameFilter() {
+            FilenameFilter IMAGE_FILTER = new FilenameFilter() 
+            {
                 @Override
-                public boolean accept(final File dir, final String filename) {
-                    for (String extension : EXTENSIONS) if (filename.endsWith("." + extension)) return true;
+                public boolean accept(final File dir, final String filename) 
+                {
+                    for (String extension : EXTENSIONS) 
+                    	if (filename.endsWith("." + extension)) return true;
                     return false;
                 }
             };
             ArrayList<BufferedImage> images = new ArrayList<BufferedImage>();
-            if (dir.isDirectory()) { // make sure it's a directory
-                for (final File f : dir.listFiles(IMAGE_FILTER)) {
-                    try {
+            if (dir.isDirectory()) 
+            { // make sure it's a directory
+                for (final File f : dir.listFiles(IMAGE_FILTER)) 
+                {
+                    try 
+                    {
                     	images.add(ImageIO.read(f));
-                    } catch (final IOException e) {
-                    }
+                    } 
+                    catch (IOException e){}
                 }
             }
             
+            HttpClient httpclient2 = new DefaultHttpClient();
+
+
+            URIBuilder builder2 = new URIBuilder("https://eastus2.api.cognitive.microsoft.com/face/v1.0/facelists/face_list");
+
+
+            URI uri2 = builder2.build();
+            HttpPut request2 = new HttpPut(uri2);
+            request2.setHeader("Content-Type", "application/json");
+            request2.setHeader("Ocp-Apim-Subscription-Key", subscriptionKey);
+
+
+            // Request body
+            StringEntity reqEntity = new StringEntity("{\"name\": \"face_list\"}");
+            request2.setEntity(reqEntity);
+
+            HttpResponse response2 = httpclient2.execute(request2);
+            HttpEntity entity2 = response2.getEntity();
+
+            if (entity2 != null) 
+            {
+                System.out.println("2: " + EntityUtils.toString(entity2));
+            }
+            
+            ArrayList<String> face_ids = new ArrayList<String>(0);
 //            BufferedImage bi = ImageIO.read(new File("./pic.jpg"));
-            for (BufferedImage bi : images) {
+            for (BufferedImage bi : images) 
+            {
                 ByteArrayOutputStream os = new ByteArrayOutputStream();
                 ImageIO.write(bi,"jpg", os); 
                 InputStream fis = new ByteArrayInputStream(os.toByteArray());
@@ -112,37 +144,7 @@ public class FaceAPI
                 // Execute the REST API call and get the response entity.
                 HttpResponse response = httpclient.execute(request);
                 HttpEntity entity = response.getEntity();
-                
-                
-                
-                
-                
-                HttpClient httpclient2 = new DefaultHttpClient();
-
-
-                URIBuilder builder2 = new URIBuilder("https://eastus2.api.cognitive.microsoft.com/face/v1.0/facelists/face_list_3");
-
-
-                URI uri2 = builder2.build();
-                HttpPut request2 = new HttpPut(uri2);
-                request2.setHeader("Content-Type", "application/json");
-                request2.setHeader("Ocp-Apim-Subscription-Key", subscriptionKey);
-
-
-                // Request body
-                StringEntity reqEntity = new StringEntity("{\"name\": \"face_list_3\"}");
-                request2.setEntity(reqEntity);
-
-                HttpResponse response2 = httpclient2.execute(request2);
-                HttpEntity entity2 = response2.getEntity();
-
-                if (entity2 != null) {
-                    System.out.println(EntityUtils.toString(entity2));
-                }
-                
-                
-                
-                
+  
                 if (entity != null) {
                     // Format and display the JSON response.
                     //System.out.println("REST Response:\n");
@@ -153,7 +155,7 @@ public class FaceAPI
                     
                     if (jsonString.charAt(0) == '[') {
                         JSONArray jsonArray = new JSONArray(jsonString);
-                        ArrayList<String> face_ids = new ArrayList<String>(0);
+                        
                         for(int i = 0; i < jsonArray.length(); i++) {
                         	JSONObject jo = jsonArray.getJSONObject(i).getJSONObject("faceRectangle");
                         	face_ids.add(jsonArray.getJSONObject(i).getString("faceId"));
@@ -161,16 +163,12 @@ public class FaceAPI
                         	int left = jo.getInt("left");
                         	int width = jo.getInt("width");
                         	int height = jo.getInt("height");
-                        
-                        	System.out.println(jsonArray.toString(2));           
+                       
                         	BBoxDrawer.drawRect(left, top, width, height);
                         	
-                        	
-                        	
-                        	
-                        	URIBuilder builder3 = new URIBuilder("https://eastus2.api.cognitive.microsoft.com/face/v1.0/facelists/face_list_3");
+                        	URIBuilder builder3 = new URIBuilder("https://eastus2.api.cognitive.microsoft.com/face/v1.0/facelists/face_list");
 
-                        	builder3.setParameter("faceListId", "face_list_3");
+                        	builder3.setParameter("faceListId", "face_list");
 //                            builder3.setParameter("userData", "{string}");
                             builder3.setParameter("targetFace", left +","+ top +","+ width +","+ height);
 
@@ -178,8 +176,7 @@ public class FaceAPI
                             HttpPost request3 = new HttpPost(uri3);
                             request.setHeader("Content-Type", "application/octet-stream");
                             request.setHeader("Ocp-Apim-Subscription-Key", subscriptionKey);
-
-
+                            
                             // Request body
                             request.setEntity(e2);
 
@@ -188,40 +185,9 @@ public class FaceAPI
 
                             if (entity3 != null) 
                             {
-//                                System.out.println(EntityUtils.toString(entity3));
-                            }
-                        	
-                        	
-                        	
-                        	
-                        }  
-                        
-                        httpclient = new DefaultHttpClient();
-                        URIBuilder builder4 = new URIBuilder("https://eastus2.api.cognitive.microsoft.com/face/v1.0/findsimilars");
-
-
-                        URI uri4 = builder4.build();
-                        HttpPost request4 = new HttpPost(uri4);
-                        request4.setHeader("Content-Type", "application/json");
-                        request4.setHeader("Ocp-Apim-Subscription-Key", subscriptionKey);
-
-
-                        // Request body
-                        for (int i = 0; i < face_ids.size(); i++) {
-                            StringEntity reqEntity4 = new StringEntity("\"faceId\": \""+ face_ids.get(i) + "\",\n\"faceListId\": \"face_list_3\"");
-                            request4.setEntity(reqEntity4);
-
-                            HttpResponse response4 = httpclient.execute(request4);
-                            HttpEntity entity4 = response4.getEntity();
-
-                            if (entity4 != null) 
-                            {
-                                System.out.println(EntityUtils.toString(entity4));
-                            }
-                        }
-                        
-                        
-                        
+                            	System.out.println("3: " + EntityUtils.toString(entity3));
+                            }         	
+                        }            
                     }
                     else if (jsonString.charAt(0) == '{') {
                         JSONObject jsonObject = new JSONObject(jsonString);
@@ -234,9 +200,46 @@ public class FaceAPI
                 jf.setSize(bi.getWidth(), bi.getHeight()+45);
                 jf.getContentPane().add(new JLabel(new ImageIcon(bi)));	
                 jf.setDefaultCloseOperation(3);
-                jf.setVisible(true);
-            }
+                //jf.setVisible(true);
+            }       
 
+            HttpClient httpclient4 = new DefaultHttpClient();
+            URIBuilder builder4 = new URIBuilder("https://eastus2.api.cognitive.microsoft.com/face/v1.0/findsimilars");
+
+            URI uri4 = builder4.build();
+            HttpPost request4 = new HttpPost(uri4);
+            request4.setHeader("Content-Type", "application/json");
+            request4.setHeader("Ocp-Apim-Subscription-Key", subscriptionKey);
+
+            // Request body
+            for (int i = 0; i < face_ids.size(); i++) {
+            	httpclient4 = new DefaultHttpClient();
+                StringEntity reqEntity4 = new StringEntity("{\"faceId\": \""+ face_ids.get(i) + "\",\n\"faceListId\": \"face_list\"}");
+                request4.setEntity(reqEntity4);
+
+                HttpResponse response4 = httpclient4.execute(request4);
+                HttpEntity entity4 = response4.getEntity();
+
+                if (entity4 != null) 
+                {
+                    System.out.println("4: " + EntityUtils.toString(entity4));
+                }
+            }  
+            HttpClient httpclient5 = new DefaultHttpClient();
+            URIBuilder builder5 = new URIBuilder("https://eastus2.api.cognitive.microsoft.com/face/v1.0/facelists/face_list");
+
+            URI uri5 = builder5.build();
+            HttpDelete request5 = new HttpDelete(uri5);
+            request5.setHeader("Ocp-Apim-Subscription-Key", subscriptionKey);
+
+            // Request body
+            HttpResponse response5 = httpclient5.execute(request5);
+            HttpEntity entity = response5.getEntity();
+            
+            if(entity != null)
+            {
+            	System.out.println("5: " + EntityUtils.toString(entity));
+            }
         }
         catch (Exception e)
         {
