@@ -22,7 +22,6 @@ import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpDelete;
-import org.apache.http.client.methods.HttpGet ;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.InputStreamEntity;
@@ -41,7 +40,7 @@ public class FaceAPI
     // **********************************************
 
     // Replace the subscriptionKey string value with your valid subscription key.
-    public static final String subscriptionKey = "b9e6a92cea184214bac927037c576461";
+    public static final String subscriptionKey = "2da159111934452dbc95a0aa44b4cbcf";
 
     // Replace or verify the region.
     //
@@ -165,8 +164,9 @@ public class FaceAPI
                         	int height = jo.getInt("height");
                        
                         	BBoxDrawer.drawRect(left, top, width, height);
-                        	
-                        	URIBuilder builder3 = new URIBuilder("https://eastus2.api.cognitive.microsoft.com/face/v1.0/facelists/face_list");
+                        	/*
+                        	HttpClient httpclient3 = new DefaultHttpClient();
+                        	URIBuilder builder3 = new URIBuilder("https://eastus2.api.cognitive.microsoft.com/face/v1.0/facelists/face_list/persistedFaces");
 
                         	builder3.setParameter("faceListId", "face_list");
 //                            builder3.setParameter("userData", "{string}");
@@ -180,13 +180,13 @@ public class FaceAPI
                             // Request body
                             request.setEntity(e2);
 
-                            HttpResponse response3 = httpclient.execute(request3);
+                            HttpResponse response3 = httpclient3.execute(request3);
                             HttpEntity entity3 = response3.getEntity();
 
                             if (entity3 != null) 
                             {
                             	System.out.println("3: " + EntityUtils.toString(entity3));
-                            }         	
+                            }         	*/
                         }            
                     }
                     else if (jsonString.charAt(0) == '{') {
@@ -203,6 +203,10 @@ public class FaceAPI
                 //jf.setVisible(true);
             }       
 
+            JSONArray ids = new JSONArray();
+            for(int i = 0; i < face_ids.size(); i++)
+            	ids.put(face_ids.get(i));
+            
             HttpClient httpclient4 = new DefaultHttpClient();
             URIBuilder builder4 = new URIBuilder("https://eastus2.api.cognitive.microsoft.com/face/v1.0/findsimilars");
 
@@ -214,7 +218,9 @@ public class FaceAPI
             // Request body
             for (int i = 0; i < face_ids.size(); i++) {
             	httpclient4 = new DefaultHttpClient();
-                StringEntity reqEntity4 = new StringEntity("{\"faceId\": \""+ face_ids.get(i) + "\",\n\"faceListId\": \"face_list\"}");
+            	String current = (String)ids.remove(0);
+                StringEntity reqEntity4 = new StringEntity("{\"faceId\": \""+ face_ids.get(i) + "\",\n\"faceids\": " + ids.toString() + "}");
+                ids.put(current);
                 request4.setEntity(reqEntity4);
 
                 HttpResponse response4 = httpclient4.execute(request4);
