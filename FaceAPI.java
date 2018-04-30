@@ -219,9 +219,10 @@ public class FaceAPI
                     	for(int j = 0; j < jsonArray.length(); j++)
                     	{
                     		String key = jsonArray.getJSONObject(j).getString("faceId");
+                    		double conf = jsonArray.getJSONObject(j).getDouble("confidence");
                     		int matchInd = face_ids.indexOf(key);
                     		
-                    		outputTxt += "    the face [" +(matchInd+1) + "] at " + co_ords.get(matchInd) + " in image " + ids_to_img.get(matchInd) + "\n";
+                    		outputTxt += "    the face [" +(matchInd+1) + "] at " + co_ords.get(matchInd) + " in image " + ids_to_img.get(matchInd) + " (" + (int)Math.round(conf*100) + "% confidence)\n";
                     	}
                     	outputTxt += "\n\n";
                     }
