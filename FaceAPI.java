@@ -167,6 +167,10 @@ public class FaceAPI
                         	int height = jo.getInt("height");
                        
                         	BBoxDrawer.drawRect(left, top, width, height);
+                        	
+
+                            totalFaces += 1;
+                        	BBoxDrawer.drawString(String.format("Face %d", totalFaces), left, top);
                         	/*
                         	HttpClient httpclient3 = new DefaultHttpClient();
                         	URIBuilder builder3 = new URIBuilder("https://eastus2.api.cognitive.microsoft.com/face/v1.0/facelists/face_list/persistedFaces");
@@ -200,7 +204,6 @@ public class FaceAPI
                     }
                 }
                 JFrame jf;
-                totalFaces += facesFound;
                 if (facesFound == 1) jf = new JFrame(String.format("1 Face Found. Face %d", totalFaces));
                 else jf = new JFrame(String.format("%d Faces Found. Faces %d - %d", facesFound, totalFaces - facesFound + 1,totalFaces));
                 jf.setSize(bi.getWidth(), bi.getHeight()+45);
