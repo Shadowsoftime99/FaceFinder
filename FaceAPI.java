@@ -123,11 +123,13 @@ public class FaceAPI
 
             if (entity2 != null) 
             {
-                System.out.println("2: " + EntityUtils.toString(entity2));
+//                System.out.println("2: " + EntityUtils.toString(entity2));
+                System.out.println("Face Finding started.");
             }
             
             ArrayList<String> face_ids = new ArrayList<String>(0);
 //            BufferedImage bi = ImageIO.read(new File("./pic.jpg"));
+            int totalFaces = 0;
             for (BufferedImage bi : images) 
             {
                 ByteArrayOutputStream os = new ByteArrayOutputStream();
@@ -143,7 +145,8 @@ public class FaceAPI
                 // Execute the REST API call and get the response entity.
                 HttpResponse response = httpclient.execute(request);
                 HttpEntity entity = response.getEntity();
-  
+                
+                int facesFound = 0;
                 if (entity != null) {
                     // Format and display the JSON response.
                     //System.out.println("REST Response:\n");
@@ -154,7 +157,7 @@ public class FaceAPI
                     
                     if (jsonString.charAt(0) == '[') {
                         JSONArray jsonArray = new JSONArray(jsonString);
-                        
+                        facesFound = jsonArray.length();
                         for(int i = 0; i < jsonArray.length(); i++) {
                         	JSONObject jo = jsonArray.getJSONObject(i).getJSONObject("faceRectangle");
                         	face_ids.add(jsonArray.getJSONObject(i).getString("faceId"));
@@ -196,11 +199,14 @@ public class FaceAPI
                         System.out.println(jsonString);
                     }
                 }
-                JFrame jf = new JFrame("FaceFinder");
+                JFrame jf;
+                totalFaces += facesFound;
+                if (facesFound == 1) jf = new JFrame(String.format("1 Face Found. Face %d", totalFaces));
+                else jf = new JFrame(String.format("%d Faces Found. Faces %d - %d", facesFound, totalFaces - facesFound + 1,totalFaces));
                 jf.setSize(bi.getWidth(), bi.getHeight()+45);
                 jf.getContentPane().add(new JLabel(new ImageIcon(bi)));	
                 jf.setDefaultCloseOperation(3);
-                //jf.setVisible(true);
+                jf.setVisible(true);
             }       
 
             JSONArray ids = new JSONArray();
@@ -228,7 +234,7 @@ public class FaceAPI
 
                 if (entity4 != null) 
                 {
-                    System.out.println("4: " + EntityUtils.toString(entity4));
+                    System.out.println("Face " + (i + 1) + ": " + EntityUtils.toString(entity4));
                 }
             }  
             HttpClient httpclient5 = new DefaultHttpClient();
@@ -244,7 +250,8 @@ public class FaceAPI
             
             if(entity != null)
             {
-            	System.out.println("5: " + EntityUtils.toString(entity));
+//            	System.out.println("5: " + EntityUtils.toString(entity));
+            	System.out.println("Face Finding complete.");
             }
         }
         catch (Exception e)
