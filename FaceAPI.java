@@ -2,6 +2,7 @@
 // and the org.json library (org.json:json:20170516).
 
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
@@ -10,13 +11,12 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintWriter;
 import java.net.URI;
 import java.util.ArrayList;
 
 import javax.imageio.ImageIO;
-import javax.swing.ImageIcon;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -31,7 +31,6 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.util.EntityUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
-
 
 public class FaceAPI
 {
@@ -59,6 +58,8 @@ public class FaceAPI
         {
         	HttpClient httpclient = new DefaultHttpClient();
             URIBuilder builder = new URIBuilder(uriBase);
+            String outputTxt = "";
+            int totalFaces = 0;
 
             // Request parameters. All of them are optional.
             builder.setParameter("returnFaceId", "true");
@@ -72,12 +73,9 @@ public class FaceAPI
             // Request headers.
             request.setHeader("Content-Type", "application/octet-stream"); //octet-stream for local, json for URL
             request.setHeader("Ocp-Apim-Subscription-Key", subscriptionKey);
-
-            // Request body.
-            // StringEntity e1 = new StringEntity("{\"url\":\"https://upload.wikimedia.org/wikipedia/commons/c/c3/RH_Louise_Lillian_Gish.jpg\"}");
             
-            //NEW CODE: Trying to change the request Entity to be an InputStream
-            File dir = new File(".");
+            //Block below manages files and pulls all image files from the folder.
+            File dir = new File("./input");
             String[] EXTENSIONS = new String[]{"jpg", "png", "gif"};
             FilenameFilter IMAGE_FILTER = new FilenameFilter() 
             {
@@ -89,6 +87,7 @@ public class FaceAPI
                     return false;
                 }
             };
+            
             ArrayList<BufferedImage> images = new ArrayList<BufferedImage>();
             if (dir.isDirectory()) 
             { // make sure it's a directory
@@ -120,16 +119,17 @@ public class FaceAPI
 
             HttpResponse response2 = httpclient2.execute(request2);
             HttpEntity entity2 = response2.getEntity();
-
+/*
             if (entity2 != null) 
             {
-//                System.out.println("2: " + EntityUtils.toString(entity2));
-                System.out.println("Face Finding started.");
-            }
+                System.out.println("2: " + EntityUtils.toString(entity2));
+            }*/
             
             ArrayList<String> face_ids = new ArrayList<String>(0);
-//            BufferedImage bi = ImageIO.read(new File("./pic.jpg"));
-            int totalFaces = 0;
+            ArrayList<Integer> ids_to_img = new ArrayList<Integer>(0);
+            ArrayList<String> co_ords = new ArrayList<String>(0);
+            
+            int in = 1;
             for (BufferedImage bi : images) 
             {
                 ByteArrayOutputStream os = new ByteArrayOutputStream();
@@ -138,16 +138,14 @@ public class FaceAPI
                 
                 InputStreamEntity e2 = new InputStreamEntity(fis, -1);
                 
-                //END NEW CODE
-                
                 request.setEntity(e2);
 
                 // Execute the REST API call and get the response entity.
                 HttpResponse response = httpclient.execute(request);
                 HttpEntity entity = response.getEntity();
-                
-                int facesFound = 0;
-                if (entity != null) {
+  
+                if (entity != null) 
+                {
                     // Format and display the JSON response.
                     //System.out.println("REST Response:\n");
 
@@ -157,43 +155,22 @@ public class FaceAPI
                     
                     if (jsonString.charAt(0) == '[') {
                         JSONArray jsonArray = new JSONArray(jsonString);
-                        facesFound = jsonArray.length();
+                        
                         for(int i = 0; i < jsonArray.length(); i++) {
                         	JSONObject jo = jsonArray.getJSONObject(i).getJSONObject("faceRectangle");
                         	face_ids.add(jsonArray.getJSONObject(i).getString("faceId"));
+                        	ids_to_img.add(in);
+                        	
                         	int top = jo.getInt("top");
                         	int left = jo.getInt("left");
                         	int width = jo.getInt("width");
                         	int height = jo.getInt("height");
+                        	co_ords.add("(" + left +", "+ top + ") - ("+ (left+width) +", "+ (top+height) + ")");
                        
                         	BBoxDrawer.drawRect(left, top, width, height);
-                        	
-
-                            totalFaces += 1;
-                        	BBoxDrawer.drawString(String.format("Face %d", totalFaces), left, top);
-                        	/*
-                        	HttpClient httpclient3 = new DefaultHttpClient();
-                        	URIBuilder builder3 = new URIBuilder("https://eastus2.api.cognitive.microsoft.com/face/v1.0/facelists/face_list/persistedFaces");
-
-                        	builder3.setParameter("faceListId", "face_list");
-//                            builder3.setParameter("userData", "{string}");
-                            builder3.setParameter("targetFace", left +","+ top +","+ width +","+ height);
-
-                            URI uri3 = builder3.build();
-                            HttpPost request3 = new HttpPost(uri3);
-                            request.setHeader("Content-Type", "application/octet-stream");
-                            request.setHeader("Ocp-Apim-Subscription-Key", subscriptionKey);
-                            
-                            // Request body
-                            request.setEntity(e2);
-
-                            HttpResponse response3 = httpclient3.execute(request3);
-                            HttpEntity entity3 = response3.getEntity();
-
-                            if (entity3 != null) 
-                            {
-                            	System.out.println("3: " + EntityUtils.toString(entity3));
-                            }         	*/
+                        	totalFaces += 1;
+                        	BBoxDrawer.setFont(new Font(null, Font.BOLD, 14));
+                        	BBoxDrawer.drawString("Face " + totalFaces, left, top);
                         }            
                     }
                     else if (jsonString.charAt(0) == '{') {
@@ -203,13 +180,7 @@ public class FaceAPI
                         System.out.println(jsonString);
                     }
                 }
-                JFrame jf;
-                if (facesFound == 1) jf = new JFrame(String.format("1 Face Found. Face %d", totalFaces));
-                else jf = new JFrame(String.format("%d Faces Found. Faces %d - %d", facesFound, totalFaces - facesFound + 1,totalFaces));
-                jf.setSize(bi.getWidth(), bi.getHeight()+45);
-                jf.getContentPane().add(new JLabel(new ImageIcon(bi)));	
-                jf.setDefaultCloseOperation(3);
-                jf.setVisible(true);
+                in++;
             }       
 
             JSONArray ids = new JSONArray();
@@ -225,7 +196,8 @@ public class FaceAPI
             request4.setHeader("Ocp-Apim-Subscription-Key", subscriptionKey);
 
             // Request body
-            for (int i = 0; i < face_ids.size(); i++) {
+            for (int i = 0; i < face_ids.size(); i++) 
+            {
             	httpclient4 = new DefaultHttpClient();
             	String current = (String)ids.remove(0);
                 StringEntity reqEntity4 = new StringEntity("{\"faceId\": \""+ face_ids.get(i) + "\",\n\"faceids\": " + ids.toString() + "}");
@@ -237,7 +209,22 @@ public class FaceAPI
 
                 if (entity4 != null) 
                 {
-                    System.out.println("Face " + (i + 1) + ": " + EntityUtils.toString(entity4));
+                	String jsonString = EntityUtils.toString(entity4).trim();
+                   // System.out.println(jsonString);
+                    JSONArray jsonArray = new JSONArray(jsonString);
+                    if(jsonArray.length() != 0)
+                    {
+                    	outputTxt += "The face [" +(i+1) + "] at " + co_ords.get(i) + " in image " + ids_to_img.get(i) + " matches with:\n";
+                    	
+                    	for(int j = 0; j < jsonArray.length(); j++)
+                    	{
+                    		String key = jsonArray.getJSONObject(j).getString("faceId");
+                    		int matchInd = face_ids.indexOf(key);
+                    		
+                    		outputTxt += "    the face [" +(matchInd+1) + "] at " + co_ords.get(matchInd) + " in image " + ids_to_img.get(matchInd) + "\n";
+                    	}
+                    	outputTxt += "\n\n";
+                    }
                 }
             }  
             HttpClient httpclient5 = new DefaultHttpClient();
@@ -249,13 +236,26 @@ public class FaceAPI
 
             // Request body
             HttpResponse response5 = httpclient5.execute(request5);
-            HttpEntity entity = response5.getEntity();
+            HttpEntity entity5 = response5.getEntity();
             
-            if(entity != null)
+           /* if(entity != null)
             {
-//            	System.out.println("5: " + EntityUtils.toString(entity));
-            	System.out.println("Face Finding complete.");
+            	System.out.println("5: " + EntityUtils.toString(entity));
+            }*/
+            
+            int ou = 1;
+            for(BufferedImage bi : images)
+            {
+            	File f = new File("./output/out"+ou+".png");
+            	ImageIO.write(bi, "PNG", f);
+            	ou++;
             }
+            
+           // System.out.println(outputTxt);
+            PrintWriter writer = new PrintWriter("./output/match_info.txt", "UTF-8");
+            writer.write(outputTxt);
+            writer.close();
+            JOptionPane.showMessageDialog(null, "Analysis finished! Open the output folder to see the results.", "FaceFinder", -1);
         }
         catch (Exception e)
         {
